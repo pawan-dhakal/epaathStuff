@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activities Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            overflow: auto;
+        }
+        .filter {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .filter input, .filter select {
+            padding: 10px;
+            font-size: 16px;
+            width: 23%;
+        }
+        .activity-count {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        #activityList {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .card {
+            background-color: white;
+            margin: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            width: 45%;
+            box-sizing: border-box;
+        }
+        .card img {
+            max-width: 100px;
+            margin-right: 20px;
+        }
+        .card .details {
+            flex: 1;
+        }
+        .card .details h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .card .details p {
+            margin: 5px 0;
+        }
+        .card .details a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .card .details a:hover {
+            text-decoration: underline;
+        }
+        .upload-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-container input {
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Activities Dashboard</h1>
+    <div class="upload-container">
+        <input type="file" id="fileInput" accept=".csv">
+    </div>
+    <div class="container">
+        <div class="filter">
+            <input type="text" id="search" placeholder="Search Activity Name...">
+            <select id="gradeFilter">
+                <option value="">All Grades</option>
+                <option value="1">Grade 1</option>
+                <option value="2">Grade 2</option>
+                <option value="3">Grade 3</option>
+                <option value="4">Grade 4</option>
+                <option value="5">Grade 5</option>
+                <option value="6">Grade 6</option>
+                <option value="7">Grade 7</option>
+                <option value="8">Grade 8</option>
+            </select>
+            <select id="subjectFilter">
+                <option value="">All Subjects</option>
+                <option value="Science">Science</option>
+                <option value="English">English</option>
+                <option value="Nepali">Nepali</option>
+                <option value="Math">Math</option>
+            </select>
+            <select id="languageFilter">
+                <option value="">All Languages</option>
+                <option value="en">English</option>
+                <option value="np">Nepali</option>
+            </select>
+        </div>
+        <div class="activity-count">
+            Total Activities: <span id="activityCount">0</span>
+        </div>
+        <div id="activityList"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script>
+        let activities = [];
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    dynamicTyping: true,
+                    complete: function(results) {
+                        activities = results.data;
+                        displayActivities(activities);
+                    }
+                });
+            }
+        });
+
+        function extractLanguageAndID(url) {
+            try {
+                const urlObj = new URL(url);
+                const id = urlObj.searchParams.get('id');
+                const lang = urlObj.searchParams.get('lang');
+                return { id, lang };
+            } catch (e) {
+                console.error("Invalid URL: ", url);
+                return { id: null, lang: null };
+            }
+        }
+
+        function displayActivities(activities) {
+            const activityList = document.getElementById('activityList');
+            const activityCount = document.getElementById('activityCount');
+            activityList.innerHTML = '';
+            activities.forEach(activity => {
+                const { id, lang } = extractLanguageAndID(activity.URL);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${activity.Thumbnail}" alt="${activity['Activity Name']}">
+                    <div class="details">
+                        <h3>${activity['Activity Name']}</h3>
+                        <p>Grade: ${activity.Grade}</p>
+                        <p>Subject: ${activity.Subject}</p>
+                        <p>ID: ${id}</p>
+                        <p>Language: ${lang}</p>
+                        <a href="${activity.URL}" target="_blank">View Activity</a>
+                    </div>
+                `;
+                activityList.appendChild(card);
+            });
+            activityCount.textContent = activities.length;
+        }
+
+        function filterActivities(activities) {
+            const search = document.getElementById('search').value.toLowerCase();
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const subjectFilter = document.getElementById('subjectFilter').value;
+            const languageFilter = document.getElementById('languageFilter').value;
+
+            return activities.filter(activity => {
+                const { lang } = extractLanguageAndID(activity.URL);
+                const activityName = activity['Activity Name'] ? activity['Activity Name'].toLowerCase() : '';
+                const actSubject = activity['Subject'] ? activity['Subject'].toLowerCase(): '';
+                return (
+                    (!search || activityName.includes(search.toLowerCase())) &&
+                    (!gradeFilter || activity.Grade == gradeFilter) &&
+                    (!subjectFilter || actSubject === subjectFilter.toLowerCase()) &&
+                    (!languageFilter || lang === languageFilter)
+                );
+            });
+        }
+
+        document.getElementById('search').addEventListener('input', () => {
+            displayActivities(filterActivities(activities));
+        });
+
+        document.getElementById('gradeFilter').addEventListener('change', () => {
+            displayActivities(filterActivities(activities));
+        });
+
+        document.getElementById('subjectFilter').addEventListener('change', () => {
+            displayActivities(filterActivities(activities));
+        });
+
+        document.getElementById('languageFilter').addEventListener('change', () => {
+            displayActivities(filterActivities(activities));
+        });
+    </script>
+</body>
+</html>
+
