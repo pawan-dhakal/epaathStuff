@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIE Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            overflow: auto;
+        }
+        .filter {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .filter-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .filter input, .filter select {
+            padding: 10px;
+            font-size: 16px;
+            width: 23%;
+            margin-bottom: 10px;
+        }
+        .filter button {
+            padding: 10px;
+            font-size: 16px;
+            width: 23%;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .activity-count {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        #activityList {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .card {
+            background-color: white;
+            margin: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 45%;
+            box-sizing: border-box;
+        }
+        .card .details {
+            flex: 1;
+        }
+        .card .details h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .card .details p {
+            margin: 5px 0;
+        }
+        .card .details a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .card .details a:hover {
+            text-decoration: underline;
+        }
+        .upload-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-container input {
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Grade 6 Dashboard</h1>
+    <div class="upload-container">
+        <input type="file" id="fileInput" accept=".csv">
+    </div>
+    <div class="container">
+        <div class="filter">
+            <div class="filter-row">
+                <input type="text" id="search" placeholder="Search by Title, Subject, or Name...">
+            </div>
+            <div class="filter-row">
+                <select id="gradeFilter">
+                    <option value="">All Grades</option>
+                    <option value="6">Grade 6</option>
+                    <option value="7">Grade 7</option>
+                    <option value="8">Grade 8</option>
+                    <option value="9">Grade 9</option>
+                    <option value="10">Grade 10</option>
+                </select>
+                <select id="subjectFilter">
+                    <option value="">All Subjects</option>
+                    <option value="Science and Technology [[विज्ञान तथा प्रविधि]]">Science</option>
+                    <option value="English [[English]]">English</option>
+                    <option value="नेपाली [[नेपाली]]">नेपाली</option>
+                    <option value="Maths [[गणित]]">Math</option>
+                    <option value="Social Studies and Human Value Education [[सामाजिक अध्ययन तथा मानवमूल्य शिक्षा]]">Social Studies & Human Value</option>
+                    <option value="Health, Physical and Creative Arts [[स्वास्थ्य, शारीरिक तथा सिर्जनात्मक कला]]">Health, Physical and Creative Arts</option>
+                </select>
+                <select id="typeFilter">
+                    <option value="">All Content Types</option>
+                    <option value="interactive">Interactive</option>
+                    <option value="audio">Audio</option>
+                    <option value="video">Video</option>
+                    <option value="document">Document</option>
+                </select>
+                <select id="chapterFilter">
+                    <option value="">All Chapters</option>
+                </select>
+                <button id="resetButton">Reset</button>
+            </div>
+        </div>
+        <div class="activity-count">
+            Total Activities: <span id="activityCount">0</span>
+        </div>
+        <div id="activityList"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script>
+        let activities = [];
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                Papa.parse(file, {
+                    header: true,
+                    dynamicTyping: true,
+                    complete: function(results) {
+                        activities = results.data;
+                        populateChapterFilter();
+                        displayActivities(activities);
+                    }
+                });
+            }
+        });
+
+        function displayActivities(filteredActivities) {
+            const activityList = document.getElementById('activityList');
+            const activityCount = document.getElementById('activityCount');
+            activityList.innerHTML = '';
+            filteredActivities.forEach(activity => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="details">
+                        <h3>${activity.title}</h3>
+                        <p>Grade: ${activity.grade}</p>
+                        <p>Subject: ${activity.subject}</p>
+                        <p>Chapter: ${activity.chapter_slug}</p>
+                        <p>Content Type: ${activity.type}</p>
+                        <a href="${activity.link}" target="_blank">View Content</a>
+                    </div>
+                `;
+                activityList.appendChild(card);
+            });
+            activityCount.textContent = filteredActivities.length;
+        }
+
+        function filterActivities() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const subjectFilter = document.getElementById('subjectFilter').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+            const chapterFilter = document.getElementById('chapterFilter').value.toLowerCase();
+
+            return activities.filter(activity => {
+                const title = activity.title ? activity.title.toLowerCase() : '';
+                const name = activity.name ? activity.name.toLowerCase() : '';
+                const subject = activity.subject ? activity.subject.toLowerCase() : '';
+                const chapter = activity.chapter_slug ? activity.chapter_slug.toLowerCase() : '';
+                const type = activity.type ? activity.type.toLowerCase() : '';
+
+                return (
+                    (!search || title.includes(search) || name.includes(search) || subject.includes(search)) &&
+                    (!gradeFilter || activity.grade == gradeFilter) &&
+                    (!subjectFilter || subject.includes(subjectFilter)) &&
+                    (!typeFilter || type === typeFilter) &&
+                    (!chapterFilter || chapter === chapterFilter)
+                );
+            });
+        }
+
+        function populateChapterFilter() {
+            const subjectFilter = document.getElementById('subjectFilter').value.toLowerCase();
+            const chapterFilter = document.getElementById('chapterFilter');
+            chapterFilter.innerHTML = '<option value="">All Chapters</option>';
+
+            const chapters = [...new Set(activities
+                .filter(activity => !subjectFilter || (activity.subject && activity.subject.toLowerCase().includes(subjectFilter)))
+                .map(activity => activity.chapter_slug)
+            )];
+
+            // Sort chapters based on the numeric part of the chapter slug
+            chapters.sort((a, b) => {
+                const numA = parseInt(a.split('-')[0], 10);
+                const numB = parseInt(b.split('-')[0], 10);
+                return numA - numB;
+            });
+
+            chapters.forEach(chapter => {
+                if (chapter) {
+                    const option = document.createElement('option');
+                    option.value = chapter;
+                    option.textContent = chapter;
+                    chapterFilter.appendChild(option);
+                }
+            });
+        }
+
+        document.getElementById('search').addEventListener('input', () => {
+            displayActivities(filterActivities());
+        });
+
+        document.getElementById('gradeFilter').addEventListener('change', () => {
+            displayActivities(filterActivities());
+        });
+
+        document.getElementById('subjectFilter').addEventListener('change', () => {
+            populateChapterFilter();
+            displayActivities(filterActivities());
+        });
+
+        document.getElementById('typeFilter').addEventListener('change', () => {
+            displayActivities(filterActivities());
+        });
+
+        document.getElementById('chapterFilter').addEventListener('change', () => {
+            displayActivities(filterActivities());
+        });
+
+        document.getElementById('resetButton').addEventListener('click', () => {
+            document.getElementById('search').value = '';
+            document.getElementById('gradeFilter').value = '';
+            document.getElementById('subjectFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('chapterFilter').value = '';
+            displayActivities(activities);
+        });
+    </script>
+</body>
+</html>
